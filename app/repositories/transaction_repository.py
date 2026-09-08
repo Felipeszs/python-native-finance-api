@@ -7,8 +7,8 @@ class TransactionRepository:
       transaction.id = self.next_id
       self.next_id += 1
 
-      self.transactions.append(self.transaction)
-
+      self.transactions.append(transaction)
+      
       return transaction
 
     def find_all(self):
