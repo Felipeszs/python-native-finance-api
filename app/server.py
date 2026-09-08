@@ -1,5 +1,6 @@
 import json
 
+from decimal import InvalidOperation
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from app.views.transaction_view import TransactionView
 
@@ -7,56 +8,109 @@ from app.views.transaction_view import TransactionView
 class RequestHandler(BaseHTTPRequestHandler):
     router = None
 
+    def _send_json(self, status, data, headers=None):
+        response = json.dumps(data).encode("utf-8")
+
+        self.send_response(status)
+        self.send_header(
+            "Content-Type",
+            "application/json; charset=utf-8",
+        )
+        self.send_header("Content-Length", str(len(response)))
+
+        for name, value in (headers or {}).items():
+            self.send_header(name, value)
+
+        self.end_headers()
+        self.wfile.write(response)
+
+    def _resolve_handler(self, method):
+        handler = self.router.resolve(method, self.path)
+
+        if handler is not None:
+            return handler
+
+        allowed_methods = self.router.allowed_methods(self.path)
+
+        if allowed_methods:
+            self._send_json(
+                405,
+                {"error": "method not allowed"},
+                {"Allow": ", ".join(allowed_methods)},
+            )
+        else:
+            self._send_json(404, {"error": "route not found"})
+
+        return None
+
     def do_GET(self):
-        handler = self.router.resolve("GET", self.path)
+        handler = self._resolve_handler("GET")
 
         if handler is None:
-            self.send_response(404)
-            self.end_headers()
             return
 
-        transactions = handler()
+        try:
+            transactions = handler()
+            data = TransactionView.serialize_transactions(transactions)
+        except Exception:
+            self._send_json(500, {"error": "internal server error"})
+            return
 
-        data = TransactionView.serialize_transactions(transactions)
-        response = json.dumps(data).encode()
-
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
-
-        self.wfile.write(response)
+        self._send_json(200, data)
 
     def do_POST(self):
-        handler = self.router.resolve("POST", self.path)
+        handler = self._resolve_handler("POST")
 
         if handler is None:
-            self.send_response(404)
-            self.end_headers()
             return
 
-        content_length = int(
-            self.headers.get("Content-Length", 0)
-        )
+        content_type = self.headers.get("Content-Type", "")
 
-        body_bytes = self.rfile.read(content_length)
+        if content_type.split(";", 1)[0].strip() != "application/json":
+            self._send_json(
+                415,
+                {"error": "Content-Type must be application/json"},
+            )
+            return
 
-        body_string = body_bytes.decode("utf-8")
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body_bytes = self.rfile.read(content_length)
+            body = json.loads(body_bytes)
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+            self._send_json(400, {"error": "request body must be valid JSON"})
+            return
 
-        body = json.loads(body_string)
+        if not isinstance(body, dict):
+            self._send_json(400, {"error": "request body must be a JSON object"})
+            return
 
-        transaction = handler(body)
+        try:
+            transaction = handler(body)
+        except KeyError as error:
+            self._send_json(
+                400,
+                {"error": f"missing field: {error.args[0]}"},
+            )
+            return
+        except (InvalidOperation, TypeError, ValueError) as error:
+            self._send_json(422, {"error": str(error)})
+            return
+        except Exception:
+            self._send_json(500, {"error": "internal server error"})
+            return
 
-        data = TransactionView.serialize_transaction(
-            transaction
-        )
+        data = TransactionView.serialize_transaction(transaction)
+        self._send_json(201, data)
 
-        response = json.dumps(data).encode()
+    def do_PUT(self):
+        self._resolve_handler("PUT")
 
-        self.send_response(201)
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
+    def do_PATCH(self):
+        self._resolve_handler("PATCH")
 
-        self.wfile.write(response)
+    def do_DELETE(self):
+        self._resolve_handler("DELETE")
 
 
 def run_server(router):

@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 
 class TransactionController:
@@ -7,8 +7,12 @@ class TransactionController:
 
     def create(self, body):
         transaction_type = body["transaction_type"]
-        value = Decimal(body["value"])
         description = body["description"]
+
+        try:
+            value = Decimal(body["value"])
+        except (InvalidOperation, TypeError):
+            raise ValueError("value must be a valid decimal") from None
 
         return self.service.create_transaction(
             transaction_type,
