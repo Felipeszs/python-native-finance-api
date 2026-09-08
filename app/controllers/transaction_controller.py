@@ -8,5 +8,5 @@ class TransactionController:
     value = body['value']
     description = body['description']
 
-    return self.service.create.create_transaction(transaction_type, value, description)
+    return self.service.create_transaction(transaction_type, value, description)
 
