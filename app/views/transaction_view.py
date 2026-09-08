@@ -1,4 +1,5 @@
 class TransactionView:
+
   @staticmethod
   def serialize_transaction(transaction):
     return {
@@ -8,7 +9,8 @@ class TransactionView:
       "description" : transaction.description
     }
 
-  def serialize_transacitions(transactions):
+  @staticmethod
+  def serialize_transactions(transactions):
     return [
       TransactionView.serialize_transaction(transaction)
       for transaction in transactions
