@@ -26,6 +26,12 @@ class TestTransactionServer(unittest.TestCase):
         router = Router()
         router.add_route("GET", "/transactions", controller.list_all)
         router.add_route("POST", "/transactions", controller.create)
+        router.add_route("GET", "/transactions/{id}", controller.get_by_id)
+        router.add_route(
+            "DELETE",
+            "/transactions/{id}",
+            controller.delete_by_id,
+        )
 
         QuietRequestHandler.router = router
         self.server = HTTPServer(("127.0.0.1", 0), QuietRequestHandler)
@@ -47,7 +53,8 @@ class TestTransactionServer(unittest.TestCase):
         )
         connection.request(method, path, body=body, headers=headers or {})
         response = connection.getresponse()
-        data = json.loads(response.read())
+        response_body = response.read()
+        data = json.loads(response_body) if response_body else None
         response_headers = dict(response.getheaders())
         connection.close()
 
@@ -168,6 +175,45 @@ class TestTransactionServer(unittest.TestCase):
 
         self.assertEqual(status, 405)
         self.assertEqual(headers["Allow"], "GET, POST")
+        self.assertEqual(data, {"error": "method not allowed"})
+
+    def test_delete_transaction(self):
+        _, _, transaction = self.post_json({
+            "transaction_type": "expense",
+            "value": "49.90",
+            "description": "Groceries",
+        })
+
+        status, _, data = self.request(
+            "DELETE",
+            f"/transactions/{transaction['id']}",
+        )
+
+        self.assertEqual(status, 204)
+        self.assertIsNone(data)
+
+        status, _, transactions = self.request("GET", "/transactions")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(transactions, [])
+
+    def test_return_not_found_when_deleting_unknown_transaction(self):
+        status, _, data = self.request("DELETE", "/transactions/999")
+
+        self.assertEqual(status, 404)
+        self.assertEqual(data, {"error": "transaction not found"})
+
+    def test_reject_invalid_transaction_id_on_delete(self):
+        status, _, data = self.request("DELETE", "/transactions/invalid")
+
+        self.assertEqual(status, 400)
+        self.assertEqual(data, {"error": "id must be a valid integer"})
+
+    def test_list_allowed_methods_for_transaction_resource(self):
+        status, headers, data = self.request("PUT", "/transactions/1")
+
+        self.assertEqual(status, 405)
+        self.assertEqual(headers["Allow"], "DELETE, GET")
         self.assertEqual(data, {"error": "method not allowed"})
 
 

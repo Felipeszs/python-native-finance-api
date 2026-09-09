@@ -1,30 +1,36 @@
 from app.models.transaction import Transaction
 
+
 class TransactionService:
+    def __init__(self, repository):
+        self.repository = repository
 
-  def __init__(self, repository):
-    self.repository = repository
-
-  def create_transaction(
+    def create_transaction(
         self,
         transaction_type,
         value,
-        description
+        description,
     ):
-    transaction = Transaction(
+        transaction = Transaction(
             transaction_type=transaction_type,
             value=value,
-            description=description
+            description=description,
         )
-    return self.repository.save(transaction)
+        return self.repository.save(transaction)
 
-  def list_transactions(self):
+    def list_transactions(self):
         return self.repository.find_all()
 
-  def get_transaction_by_id(self, transaction_id):
-    transaction = self.repository.find_by_id(transaction_id)
+    def get_transaction_by_id(self, transaction_id):
+        transaction = self.repository.find_by_id(transaction_id)
 
-    if transaction is None:
-        raise LookupError("transaction not found")
+        if transaction is None:
+            raise LookupError("transaction not found")
 
-    return transaction
+        return transaction
+
+    def delete_transaction_by_id(self, transaction_id):
+        deleted = self.repository.delete_by_id(transaction_id)
+
+        if not deleted:
+            raise LookupError("transaction not found")

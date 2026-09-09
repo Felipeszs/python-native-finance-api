@@ -1,7 +1,7 @@
 import json
-
 from decimal import InvalidOperation
 from http.server import BaseHTTPRequestHandler, HTTPServer
+
 from app.views.transaction_view import TransactionView
 
 
@@ -57,18 +57,15 @@ class RequestHandler(BaseHTTPRequestHandler):
             result = handler(**params)
 
             if params:
-              data = TransactionView.serialize_transaction(result)
+                data = TransactionView.serialize_transaction(result)
             else:
-              data = TransactionView.serialize_transactions(result)
-
+                data = TransactionView.serialize_transactions(result)
         except ValueError as error:
             self._send_json(400, {"error": str(error)})
             return
-
         except LookupError as error:
             self._send_json(404, {"error": str(error)})
             return
-
         except Exception:
             self._send_json(500, {"error": "internal server error"})
             return
@@ -106,18 +103,15 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         try:
             transaction = handler(body)
-
         except KeyError as error:
             self._send_json(
                 400,
                 {"error": f"missing field: {error.args[0]}"},
             )
             return
-
         except (InvalidOperation, TypeError, ValueError) as error:
             self._send_json(422, {"error": str(error)})
             return
-
         except Exception:
             self._send_json(500, {"error": "internal server error"})
             return
@@ -132,7 +126,27 @@ class RequestHandler(BaseHTTPRequestHandler):
         self._resolve_handler("PATCH")
 
     def do_DELETE(self):
-        self._resolve_handler("DELETE")
+        result = self._resolve_handler("DELETE")
+
+        if result is None:
+            return
+
+        handler, params = result
+
+        try:
+            handler(**params)
+        except ValueError as error:
+            self._send_json(400, {"error": str(error)})
+            return
+        except LookupError as error:
+            self._send_json(404, {"error": str(error)})
+            return
+        except Exception:
+            self._send_json(500, {"error": "internal server error"})
+            return
+
+        self.send_response(204)
+        self.end_headers()
 
 
 def run_server(router):
@@ -140,7 +154,7 @@ def run_server(router):
 
     server = HTTPServer(
         ("localhost", 8000),
-        RequestHandler
+        RequestHandler,
     )
 
     print("Server running at http://localhost:8000")
