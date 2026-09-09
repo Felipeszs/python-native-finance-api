@@ -1,21 +1,30 @@
 class TransactionRepository:
     def __init__(self):
-      self.transactions = []
-      self.next_id = 1
+        self.transactions = []
+        self.next_id = 1
 
     def save(self, transaction):
-      transaction.id = self.next_id
-      self.next_id += 1
+        transaction.id = self.next_id
+        self.next_id += 1
 
-      self.transactions.append(transaction)
+        self.transactions.append(transaction)
 
-      return transaction
+        return transaction
 
     def find_all(self):
-      return self.transactions
+        return self.transactions
 
     def find_by_id(self, transaction_id):
-       for transaction in self.transactions:
-          if transaction.id == transaction_id:
-            return transaction
-       return None
+        for transaction in self.transactions:
+            if transaction.id == transaction_id:
+                return transaction
+        return None
+
+    def delete_by_id(self, transaction_id):
+        transaction = self.find_by_id(transaction_id)
+
+        if transaction is None:
+            return False
+
+        self.transactions.remove(transaction)
+        return True

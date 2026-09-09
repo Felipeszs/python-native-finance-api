@@ -16,19 +16,25 @@ router = Router()
 router.add_route(
     "GET",
     "/transactions",
-    controller.list_all
+    controller.list_all,
 )
 
 router.add_route(
     "POST",
     "/transactions",
-    controller.create
+    controller.create,
 )
 
 router.add_route(
     "GET",
     "/transactions/{id}",
-    controller.get_by_id
+    controller.get_by_id,
+)
+
+router.add_route(
+    "DELETE",
+    "/transactions/{id}",
+    controller.delete_by_id,
 )
 
 run_server(router)

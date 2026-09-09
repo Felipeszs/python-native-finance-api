@@ -35,6 +35,25 @@ class TestRouter(unittest.TestCase):
 
         self.assertEqual(methods, ["GET", "POST"])
 
+    def test_resolve_dynamic_route_with_path_parameter(self):
+        self.router.add_route("DELETE", "/transactions/{id}", self.handler)
+
+        resolved_handler, params = self.router.resolve(
+            "DELETE",
+            "/transactions/42",
+        )
+
+        self.assertIs(resolved_handler, self.handler)
+        self.assertEqual(params, {"id": "42"})
+
+    def test_list_allowed_methods_for_dynamic_path(self):
+        self.router.add_route("GET", "/transactions/{id}", self.handler)
+        self.router.add_route("DELETE", "/transactions/{id}", self.handler)
+
+        methods = self.router.allowed_methods("/transactions/42")
+
+        self.assertEqual(methods, ["DELETE", "GET"])
+
 
 if __name__ == "__main__":
     unittest.main()
