@@ -22,3 +22,12 @@ class TransactionController:
 
     def list_all(self):
         return self.service.list_transactions()
+
+    def get_by_id(self, id):
+        try:
+            transaction_id = int(id)
+
+        except (ValueError, TypeError):
+            raise ValueError("id must be a valid integer") from None
+
+        return self.service.get_transaction_by_id(transaction_id)

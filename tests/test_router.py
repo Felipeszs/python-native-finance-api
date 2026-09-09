@@ -11,16 +11,18 @@ class TestRouter(unittest.TestCase):
     def test_add_and_resolve_route(self):
         self.router.add_route("GET", "/transactions", self.handler)
 
-        resolved_handler = self.router.resolve("GET", "/transactions")
+        resolved_handler, params = self.router.resolve("GET", "/transactions")
 
         self.assertIs(resolved_handler, self.handler)
+        self.assertEqual(params, {})
 
     def test_normalize_method_to_uppercase(self):
         self.router.add_route("get", "/transactions", self.handler)
 
-        resolved_handler = self.router.resolve("get", "/transactions")
+        resolved_handler, params = self.router.resolve("get", "/transactions")
 
         self.assertIs(resolved_handler, self.handler)
+        self.assertEqual(params, {})
 
     def test_return_none_for_unknown_route(self):
         self.assertIsNone(self.router.resolve("GET", "/unknown"))
