@@ -25,10 +25,12 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(response)
 
     def _resolve_handler(self, method):
-        handler = self.router.resolve(method, self.path)
+        result = self.router.resolve(method, self.path)
 
-        if handler is not None:
-            return handler
+        if result is not None:
+            handler, params = result
+
+            return handler, params
 
         allowed_methods = self.router.allowed_methods(self.path)
 
@@ -44,14 +46,29 @@ class RequestHandler(BaseHTTPRequestHandler):
         return None
 
     def do_GET(self):
-        handler = self._resolve_handler("GET")
+        result = self._resolve_handler("GET")
 
-        if handler is None:
+        if result is None:
             return
 
+        handler, params = result
+
         try:
-            transactions = handler()
-            data = TransactionView.serialize_transactions(transactions)
+            result = handler(**params)
+
+            if params:
+              data = TransactionView.serialize_transaction(result)
+            else:
+              data = TransactionView.serialize_transactions(result)
+
+        except ValueError as error:
+            self._send_json(400, {"error": str(error)})
+            return
+
+        except LookupError as error:
+            self._send_json(404, {"error": str(error)})
+            return
+
         except Exception:
             self._send_json(500, {"error": "internal server error"})
             return
@@ -59,10 +76,12 @@ class RequestHandler(BaseHTTPRequestHandler):
         self._send_json(200, data)
 
     def do_POST(self):
-        handler = self._resolve_handler("POST")
+        result = self._resolve_handler("POST")
 
-        if handler is None:
+        if result is None:
             return
+
+        handler, params = result
 
         content_type = self.headers.get("Content-Type", "")
 
@@ -87,15 +106,18 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         try:
             transaction = handler(body)
+
         except KeyError as error:
             self._send_json(
                 400,
                 {"error": f"missing field: {error.args[0]}"},
             )
             return
+
         except (InvalidOperation, TypeError, ValueError) as error:
             self._send_json(422, {"error": str(error)})
             return
+
         except Exception:
             self._send_json(500, {"error": "internal server error"})
             return

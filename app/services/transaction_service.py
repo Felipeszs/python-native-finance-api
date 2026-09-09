@@ -20,3 +20,11 @@ class TransactionService:
 
   def list_transactions(self):
         return self.repository.find_all()
+
+  def get_transaction_by_id(self, transaction_id):
+    transaction = self.repository.find_by_id(transaction_id)
+
+    if transaction is None:
+        raise LookupError("transaction not found")
+
+    return transaction

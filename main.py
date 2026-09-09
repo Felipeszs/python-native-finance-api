@@ -25,4 +25,10 @@ router.add_route(
     controller.create
 )
 
+router.add_route(
+    "GET",
+    "/transactions/{id}",
+    controller.get_by_id
+)
+
 run_server(router)
