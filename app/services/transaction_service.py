@@ -34,3 +34,20 @@ class TransactionService:
 
         if not deleted:
             raise LookupError("transaction not found")
+
+    def update_transaction_by_id(
+        self, transaction_id, transaction_type, value, description
+    ):
+
+        update_transaction = Transaction(
+            transaction_type=transaction_type,
+            value=value,
+            description=description,
+        )
+
+        transaction = self.repository.update_by_id(transaction_id, update_transaction)
+
+        if transaction is None:
+            raise LookupError("transaction not found")
+
+        return transaction

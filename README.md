@@ -87,18 +87,18 @@ python-native-finance-api/
 
 ### V1 — Fundamentos
 
-* [ ] Entidade Transaction
-* [ ] Armazenamento em memória
-* [ ] POST `/transactions`
-* [ ] GET `/transactions`
-* [ ] Servidor HTTP utilizando Python nativo
-* [ ] Arquitetura MVC
+* [x] Entidade Transaction
+* [x] Armazenamento em memória
+* [x] POST `/transactions`
+* [x] GET `/transactions`
+* [x] Servidor HTTP utilizando Python nativo
+* [x] Arquitetura MVC
 
 ### V2 — CRUD
 
-* [ ] GET `/transactions/{id}`
-* [ ] PUT `/transactions/{id}`
-* [ ] DELETE `/transactions/{id}`
+* [x] GET `/transactions/{id}`
+* [x] PUT `/transactions/{id}`
+* [x] DELETE `/transactions/{id}`
 
 ### V3 — Persistência
 

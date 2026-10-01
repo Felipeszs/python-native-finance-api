@@ -28,3 +28,12 @@ class TransactionRepository:
 
         self.transactions.remove(transaction)
         return True
+
+    def update_by_id(self, transaction_id, update_transaction):
+        for index, transaction in enumerate(self.transactions):
+            if transaction.id == transaction_id:
+                update_transaction.id = transaction.id
+                self.transactions[index] = update_transaction
+                return update_transaction
+
+        return None

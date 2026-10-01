@@ -2,12 +2,7 @@ from decimal import Decimal
 
 
 class Transaction:
-    def __init__(
-        self,
-        transaction_type: str,
-        value: Decimal,
-        description: str
-    ):
+    def __init__(self, transaction_type: str, value: Decimal, description: str):
         if not isinstance(description, str):
             raise TypeError("description must be a string")
 
@@ -21,9 +16,7 @@ class Transaction:
             raise ValueError("value must be greater than zero")
 
         if transaction_type not in ("income", "expense"):
-            raise ValueError(
-                "transaction_type must be 'income' or 'expense'"
-            )
+            raise ValueError("transaction_type must be 'income' or 'expense'")
 
         self.id = None
         self.transaction_type = transaction_type

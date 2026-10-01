@@ -1,9 +1,8 @@
-from app.repositories.transaction_repository import TransactionRepository
-from app.services.transaction_service import TransactionService
 from app.controllers.transaction_controller import TransactionController
+from app.repositories.transaction_repository import TransactionRepository
 from app.routes.router import Router
 from app.server import run_server
-
+from app.services.transaction_service import TransactionService
 
 repository = TransactionRepository()
 
@@ -35,6 +34,12 @@ router.add_route(
     "DELETE",
     "/transactions/{id}",
     controller.delete_by_id,
+)
+
+router.add_route(
+  "PUT",
+  "/transactions/{id}",
+  controller.update_by_id,
 )
 
 run_server(router)

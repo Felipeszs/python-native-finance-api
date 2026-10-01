@@ -1,7 +1,9 @@
 import json
 from decimal import InvalidOperation
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import urlsplit
 
+from app.controllers.transaction_controller import InvalidTransactionId
 from app.views.transaction_view import TransactionView
 
 
@@ -25,14 +27,15 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(response)
 
     def _resolve_handler(self, method):
-        result = self.router.resolve(method, self.path)
+        path = urlsplit(self.path).path
+        result = self.router.resolve(method, path)
 
         if result is not None:
             handler, params = result
 
             return handler, params
 
-        allowed_methods = self.router.allowed_methods(self.path)
+        allowed_methods = self.router.allowed_methods(path)
 
         if allowed_methods:
             self._send_json(
@@ -91,6 +94,15 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         try:
             content_length = int(self.headers.get("Content-Length", 0))
+            if content_length < 0:
+                raise ValueError
+        except ValueError:
+            self._send_json(
+                400, {"error": "Content-Length must be a non-negative integer"}
+            )
+            return
+
+        try:
             body_bytes = self.rfile.read(content_length)
             body = json.loads(body_bytes)
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
@@ -120,7 +132,66 @@ class RequestHandler(BaseHTTPRequestHandler):
         self._send_json(201, data)
 
     def do_PUT(self):
-        self._resolve_handler("PUT")
+        result = self._resolve_handler("PUT")
+
+        if result is None:
+            return result
+
+        handler, params = result
+
+        content_type = self.headers.get("Content-Type", "")
+
+        if content_type.split(";", 1)[0].strip() != "application/json":
+            self._send_json(
+                415,
+                {"error": "Content-Type must be application/json"},
+            )
+            return
+
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            if content_length < 0:
+                raise ValueError
+        except ValueError:
+            self._send_json(
+                400, {"error": "Content-Length must be a non-negative integer"}
+            )
+            return
+
+        try:
+            body_bytes = self.rfile.read(content_length)
+            body = json.loads(body_bytes)
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+            self._send_json(400, {"error": "request body must be valid JSON"})
+            return
+
+        if not isinstance(body, dict):
+            self._send_json(400, {"error": "request body must be a JSON object"})
+            return
+
+        try:
+            transaction = handler(body=body, **params)
+        except KeyError as error:
+            self._send_json(
+                400,
+                {"error": f"missing field: {error.args[0]}"},
+            )
+            return
+        except InvalidTransactionId as error:
+            self._send_json(400, {"error": str(error)})
+            return
+        except (InvalidOperation, TypeError, ValueError) as error:
+            self._send_json(422, {"error": str(error)})
+            return
+        except LookupError as error:
+            self._send_json(404, {"error": str(error)})
+            return
+        except Exception:
+            self._send_json(500, {"error": "internal server error"})
+            return
+
+        data = TransactionView.serialize_transaction(transaction)
+        self._send_json(200, data)
 
     def do_PATCH(self):
         self._resolve_handler("PATCH")
