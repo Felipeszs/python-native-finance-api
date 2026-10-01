@@ -31,11 +31,13 @@ class Router:
         return None
 
     def allowed_methods(self, path):
-        return sorted({
-            method
-            for method, route_path in self.routes
-            if self._match_path(route_path, path) is not None
-        })
+        return sorted(
+            {
+                method
+                for method, route_path in self.routes
+                if self._match_path(route_path, path) is not None
+            }
+        )
 
     def _match_path(self, route_path, request_path):
         params = {}
@@ -46,7 +48,11 @@ class Router:
         if len(route_parts) != len(request_parts):
             return None
 
-        for route_part, request_part in zip(route_parts, request_parts):
+        for route_part, request_part in zip(
+            route_parts,
+            request_parts,
+            strict=True,
+        ):
             if route_part.startswith("{") and route_part.endswith("}"):
                 parameter_name = route_part[1:-1]
                 params[parameter_name] = request_part

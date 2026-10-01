@@ -2,7 +2,6 @@ import http.client
 import json
 import threading
 import unittest
-
 from http.server import HTTPServer
 
 from app.controllers.transaction_controller import TransactionController
@@ -32,6 +31,7 @@ class TestTransactionServer(unittest.TestCase):
             "/transactions/{id}",
             controller.delete_by_id,
         )
+        router.add_route("PUT", "/transactions/{id}", controller.update_by_id)
 
         QuietRequestHandler.router = router
         self.server = HTTPServer(("127.0.0.1", 0), QuietRequestHandler)
@@ -50,6 +50,7 @@ class TestTransactionServer(unittest.TestCase):
         connection = http.client.HTTPConnection(
             "127.0.0.1",
             self.server.server_port,
+            timeout=2,
         )
         connection.request(method, path, body=body, headers=headers or {})
         response = connection.getresponse()
@@ -68,6 +69,14 @@ class TestTransactionServer(unittest.TestCase):
             headers={"Content-Type": "application/json"},
         )
 
+    def put_json(self, path, data):
+        return self.request(
+            "PUT",
+            path,
+            body=json.dumps(data),
+            headers={"Content-Type": "application/json"},
+        )
+
     def test_list_empty_transactions(self):
         status, headers, data = self.request("GET", "/transactions")
 
@@ -79,19 +88,24 @@ class TestTransactionServer(unittest.TestCase):
         )
 
     def test_create_and_list_transaction(self):
-        status, _, transaction = self.post_json({
-            "transaction_type": "income",
-            "value": "1500.00",
-            "description": "Salary",
-        })
+        status, _, transaction = self.post_json(
+            {
+                "transaction_type": "income",
+                "value": "1500.00",
+                "description": "Salary",
+            }
+        )
 
         self.assertEqual(status, 201)
-        self.assertEqual(transaction, {
-            "id": 1,
-            "type": "income",
-            "value": "1500.00",
-            "description": "Salary",
-        })
+        self.assertEqual(
+            transaction,
+            {
+                "id": 1,
+                "type": "income",
+                "value": "1500.00",
+                "description": "Salary",
+            },
+        )
 
         status, _, transactions = self.request("GET", "/transactions")
 
@@ -119,10 +133,12 @@ class TestTransactionServer(unittest.TestCase):
         )
 
     def test_reject_missing_field(self):
-        status, _, data = self.post_json({
-            "transaction_type": "income",
-            "value": "1500.00",
-        })
+        status, _, data = self.post_json(
+            {
+                "transaction_type": "income",
+                "value": "1500.00",
+            }
+        )
 
         self.assertEqual(status, 400)
         self.assertEqual(data, {"error": "missing field: description"})
@@ -142,11 +158,13 @@ class TestTransactionServer(unittest.TestCase):
         )
 
     def test_reject_domain_validation_error(self):
-        status, _, data = self.post_json({
-            "transaction_type": "transfer",
-            "value": "1500.00",
-            "description": "Transfer",
-        })
+        status, _, data = self.post_json(
+            {
+                "transaction_type": "transfer",
+                "value": "1500.00",
+                "description": "Transfer",
+            }
+        )
 
         self.assertEqual(status, 422)
         self.assertEqual(
@@ -155,11 +173,13 @@ class TestTransactionServer(unittest.TestCase):
         )
 
     def test_reject_invalid_decimal_value(self):
-        status, _, data = self.post_json({
-            "transaction_type": "income",
-            "value": "invalid",
-            "description": "Salary",
-        })
+        status, _, data = self.post_json(
+            {
+                "transaction_type": "income",
+                "value": "invalid",
+                "description": "Salary",
+            }
+        )
 
         self.assertEqual(status, 422)
         self.assertEqual(data, {"error": "value must be a valid decimal"})
@@ -178,11 +198,13 @@ class TestTransactionServer(unittest.TestCase):
         self.assertEqual(data, {"error": "method not allowed"})
 
     def test_delete_transaction(self):
-        _, _, transaction = self.post_json({
-            "transaction_type": "expense",
-            "value": "49.90",
-            "description": "Groceries",
-        })
+        _, _, transaction = self.post_json(
+            {
+                "transaction_type": "expense",
+                "value": "49.90",
+                "description": "Groceries",
+            }
+        )
 
         status, _, data = self.request(
             "DELETE",
@@ -210,11 +232,105 @@ class TestTransactionServer(unittest.TestCase):
         self.assertEqual(data, {"error": "id must be a valid integer"})
 
     def test_list_allowed_methods_for_transaction_resource(self):
-        status, headers, data = self.request("PUT", "/transactions/1")
+        status, headers, data = self.request("PATCH", "/transactions/1")
 
         self.assertEqual(status, 405)
-        self.assertEqual(headers["Allow"], "DELETE, GET")
+        self.assertEqual(headers["Allow"], "DELETE, GET, PUT")
         self.assertEqual(data, {"error": "method not allowed"})
+
+    def test_update_transaction_preserves_id(self):
+        _, _, created = self.post_json(
+            {
+                "transaction_type": "income",
+                "value": "10.00",
+                "description": "Original",
+            }
+        )
+        update = {
+            "transaction_type": "expense",
+            "value": "120.50",
+            "description": "Mercado",
+        }
+
+        status, _, updated = self.put_json(f"/transactions/{created['id']}", update)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            updated,
+            {
+                "id": created["id"],
+                "type": "expense",
+                "value": "120.50",
+                "description": "Mercado",
+            },
+        )
+        self.assertEqual(
+            self.request("GET", f"/transactions/{created['id']}")[2], updated
+        )
+        self.assertEqual(self.request("GET", "/transactions")[2], [updated])
+
+    def test_update_transaction_with_query_string(self):
+        _, _, created = self.post_json(
+            {
+                "transaction_type": "income",
+                "value": "10.00",
+                "description": "Original",
+            }
+        )
+
+        status, _, updated = self.put_json(
+            f"/transactions/{created['id']}?source=app",
+            {
+                "transaction_type": "expense",
+                "value": "120.50",
+                "description": "Mercado",
+            },
+        )
+
+        self.assertEqual(status, 200)
+        self.assertEqual(updated["id"], created["id"])
+
+    def test_reject_invalid_transaction_id_on_update(self):
+        status, _, data = self.put_json(
+            "/transactions/invalid",
+            {
+                "transaction_type": "expense",
+                "value": "120.50",
+                "description": "Mercado",
+            },
+        )
+
+        self.assertEqual(status, 400)
+        self.assertEqual(data, {"error": "id must be a valid integer"})
+
+    def test_return_not_found_when_updating_unknown_transaction(self):
+        status, _, data = self.put_json(
+            "/transactions/999",
+            {
+                "transaction_type": "expense",
+                "value": "120.50",
+                "description": "Mercado",
+            },
+        )
+
+        self.assertEqual(status, 404)
+        self.assertEqual(data, {"error": "transaction not found"})
+
+    def test_reject_negative_content_length_on_put(self):
+        status, _, data = self.request(
+            "PUT",
+            "/transactions/1",
+            body="{}",
+            headers={
+                "Content-Type": "application/json",
+                "Content-Length": "-1",
+            },
+        )
+
+        self.assertEqual(status, 400)
+        self.assertEqual(
+            data, {"error": "Content-Length must be a non-negative integer"}
+        )
 
 
 if __name__ == "__main__":
