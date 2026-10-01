@@ -77,11 +77,22 @@ python-native-finance-api/
 │   ├── services/
 │   └── views/
 │
+├── frontend/
+│   ├── index.html
+│   ├── styles.css
+│   └── app.js
+│
 ├── tests/
 │
 ├── main.py
 └── README.md
 ```
+
+## Interface web
+
+Execute a API com `python main.py` e abra `http://localhost:8000/` no navegador.
+O servidor entrega os arquivos de `frontend/` na mesma origem da API. A interface
+permite listar e criar transações, com estados de carregamento, lista vazia e erros.
 
 ## Funcionalidades planejadas
 
@@ -155,3 +166,4 @@ Os tipos permitidos serão:
 🚧 Projeto em desenvolvimento.
 
 A arquitetura será evoluída gradualmente durante o desenvolvimento para estudar os problemas e decisões que levam à adoção de diferentes padrões de Engenharia de Software.
+5173/gerenciamento/atividades

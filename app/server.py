@@ -1,6 +1,7 @@
 import json
 from decimal import InvalidOperation
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from app.controllers.transaction_controller import InvalidTransactionId
@@ -9,6 +10,32 @@ from app.views.transaction_view import TransactionView
 
 class RequestHandler(BaseHTTPRequestHandler):
     router = None
+    frontend_directory = Path(__file__).resolve().parent.parent / "frontend"
+
+    def _serve_frontend(self):
+        path = urlsplit(self.path).path
+        assets = {
+            "/": ("index.html", "text/html; charset=utf-8"),
+            "/styles.css": ("styles.css", "text/css; charset=utf-8"),
+            "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+        }
+        asset = assets.get(path)
+        if asset is None:
+            return False
+
+        filename, content_type = asset
+        try:
+            content = (self.frontend_directory / filename).read_bytes()
+        except OSError:
+            self._send_json(500, {"error": "internal server error"})
+            return True
+
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(content)))
+        self.end_headers()
+        self.wfile.write(content)
+        return True
 
     def _send_json(self, status, data, headers=None):
         response = json.dumps(data).encode("utf-8")
@@ -49,6 +76,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         return None
 
     def do_GET(self):
+        if self._serve_frontend():
+            return
+
         result = self._resolve_handler("GET")
 
         if result is None:

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f6f8f7">
+    <title>Transações | Finance API</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Ir para o conteúdo</a>
+    <div class="page">
+      <header class="site-header">
+        <div class="brand" aria-label="Finance API">
+          <span class="brand-mark" aria-hidden="true">F</span>
+          <span>Finance API</span>
+        </div>
+      </header>
+
+      <main id="main-content">
+        <div class="page-heading">
+          <h1>Transações</h1>
+          <p>Consulte os registros da API e adicione uma nova transação.</p>
+        </div>
+
+        <div id="error-message" class="error-message" role="alert" hidden></div>
+
+        <div class="workspace">
+          <section class="form-panel" aria-labelledby="form-title">
+            <h2 id="form-title">Nova transação</h2>
+            <p class="section-description">Preencha os dados para criar um registro.</p>
+
+            <form id="transaction-form" autocomplete="off">
+              <div class="field">
+                <label for="transaction-type">Tipo</label>
+                <select id="transaction-type" name="transaction_type" required>
+                  <option value="" selected disabled>Selecione um tipo</option>
+                  <option value="income">Entrada</option>
+                  <option value="expense">Despesa</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="transaction-value">Valor (R$)</label>
+                <input
+                  id="transaction-value"
+                  name="value"
+                  type="text"
+                  inputmode="decimal"
+                  pattern="[0-9]+([.,][0-9]+)?"
+                  title="Use um valor positivo, como 100,00"
+                  placeholder="0,00"
+                  required
+                >
+              </div>
+
+              <div class="field">
+                <label for="transaction-description">Descrição</label>
+                <input
+                  id="transaction-description"
+                  name="description"
+                  type="text"
+                  placeholder="Ex.: Salário, mercado…"
+                  required
+                >
+              </div>
+
+              <button id="submit-button" class="submit-button" type="submit">Adicionar transação</button>
+            </form>
+          </section>
+
+          <section class="list-panel" aria-labelledby="list-title">
+            <div class="list-heading">
+              <h2 id="list-title">Transações cadastradas</h2>
+            </div>
+            <div id="loading-state" class="status-state" role="status">
+              <span class="spinner" aria-hidden="true"></span>
+              <span>Carregando transações…</span>
+            </div>
+            <p id="empty-state" class="status-state" hidden>Nenhuma transação cadastrada.</p>
+            <ul id="transaction-list" class="transaction-list" hidden></ul>
+          </section>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>
