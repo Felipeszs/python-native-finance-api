@@ -92,7 +92,7 @@ python-native-finance-api/
 
 Execute a API com `python main.py` e abra `http://localhost:8000/` no navegador.
 O servidor entrega os arquivos de `frontend/` na mesma origem da API. A interface
-permite listar e criar transações, com estados de carregamento, lista vazia e erros.
+permite cadastrar categorias e listar e criar transações, com estados de carregamento, lista vazia e erros. Os dados ficam em memória e são perdidos ao reiniciar o servidor.
 
 ## Funcionalidades planejadas
 
@@ -155,11 +155,26 @@ Uma transação possuirá:
 * `description`
 * `value`
 * `type`
+* `category_id` (ID de uma categoria existente)
 
 Os tipos permitidos serão:
 
 * `income`
 * `expense`
+
+## Categorias e transações
+
+Crie uma categoria com `POST /categories` usando `{"name": "Alimentação"}`.
+Use o `id` retornado como `category_id` ao criar ou atualizar uma transação:
+
+```json
+{"transaction_type": "expense", "value": "35.00", "description": "Almoço", "category_id": 1}
+```
+
+A API também oferece `GET /categories` e `GET /categories/{id}`. Uma categoria
+inexistente retorna 404; um ID que não seja inteiro positivo retorna 422.
+
+Execute os testes com `python -m unittest discover`.
 
 ## Status
 

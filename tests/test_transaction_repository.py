@@ -12,6 +12,7 @@ class TestTransactionRepository(unittest.TestCase):
             transaction_type="income",
             value=Decimal("100.00"),
             description="Salary",
+            category_id=1,
         )
         self.repository.save(self.transaction)
 
@@ -33,6 +34,7 @@ class TestTransactionRepository(unittest.TestCase):
             transaction_type="expense",
             value=Decimal("25.00"),
             description="Dinner",
+            category_id=1,
         )
 
         saved_transaction = self.repository.save(next_transaction)

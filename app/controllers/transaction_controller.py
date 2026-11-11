@@ -17,8 +17,16 @@ class TransactionController:
             value = Decimal(body["value"])
         except (InvalidOperation, TypeError):
             raise ValueError("value must be a valid decimal") from None
+        category_id = self._category_id(body)
 
-        return self.service.create_transaction(transaction_type, value, description)
+        return self.service.create_transaction(transaction_type, value, description, category_id)
+
+    @staticmethod
+    def _category_id(body):
+        category_id = body["category_id"]
+        if type(category_id) is not int or category_id <= 0:
+            raise ValueError("category_id must be a positive integer")
+        return category_id
 
     def list_all(self):
         return self.service.list_transactions()
@@ -58,4 +66,5 @@ class TransactionController:
             transaction_type,
             value,
             description,
+            self._category_id(body),
         )

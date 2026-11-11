@@ -2,22 +2,21 @@ class Router:
     def __init__(self):
         self.routes = {}
 
-    def add_route(self, method, path, handler):
-        self.routes[(method.upper(), path)] = handler
-
-    def resolve(self, method, path):
-        is_dynamic_template = any(
-            part.startswith("{") and part.endswith("}")
-            for part in path.strip("/").split("/")
+    def add_route(self, method, path, handler, serializer):
+        self.routes[(method.upper(), path)] = (
+            handler,
+            serializer
         )
 
-        if not is_dynamic_template:
-            handler = self.routes.get((method.upper(), path))
+    def resolve(self, method, path):
+        route = self.routes.get((method.upper(), path))
 
-            if handler is not None:
-                return handler, {}
+        if route is not None:
+            handler, serializer = route
 
-        for (route_method, route_path), handler in self.routes.items():
+            return handler, {}, serializer
+
+        for (route_method, route_path), route in self.routes.items():
             if route_method != method.upper():
                 continue
 
@@ -26,7 +25,9 @@ class Router:
             if params is None:
                 continue
 
-            return handler, params
+            handler, serializer = route
+
+            return handler, params, serializer
 
         return None
 
@@ -51,7 +52,7 @@ class Router:
         for route_part, request_part in zip(
             route_parts,
             request_parts,
-            strict=True,
+            strict=True
         ):
             if route_part.startswith("{") and route_part.endswith("}"):
                 parameter_name = route_part[1:-1]
