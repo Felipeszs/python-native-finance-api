@@ -5,6 +5,11 @@ import unittest
 from http.server import HTTPServer
 
 from app.controllers.transaction_controller import TransactionController
+from app.controllers.category_controller import CategoryController
+from app.repositories.category_repository import CategoryRepository
+from app.services.category_service import CategoryService
+from app.views.category_view import CategoryView
+from app.views.transaction_view import TransactionView
 from app.repositories.transaction_repository import TransactionRepository
 from app.routes.router import Router
 from app.server import RequestHandler
@@ -19,19 +24,28 @@ class QuietRequestHandler(RequestHandler):
 class TestTransactionServer(unittest.TestCase):
     def setUp(self):
         repository = TransactionRepository()
-        service = TransactionService(repository)
+        categories = CategoryRepository()
+        category_service = CategoryService(categories)
+        category_service.create_category("General")
+        category_controller = CategoryController(category_service)
+        service = TransactionService(repository, categories)
         controller = TransactionController(service)
 
         router = Router()
-        router.add_route("GET", "/transactions", controller.list_all)
-        router.add_route("POST", "/transactions", controller.create)
-        router.add_route("GET", "/transactions/{id}", controller.get_by_id)
+        router.add_route("GET", "/transactions", controller.list_all, TransactionView.serialize_transactions)
+        router.add_route("POST", "/transactions", controller.create, TransactionView.serialize_transaction)
+        router.add_route("GET", "/transactions/{id}", controller.get_by_id, TransactionView.serialize_transaction)
         router.add_route(
             "DELETE",
             "/transactions/{id}",
             controller.delete_by_id,
+            TransactionView.serialize_transaction,
         )
-        router.add_route("PUT", "/transactions/{id}", controller.update_by_id)
+        router.add_route("PUT", "/transactions/{id}", controller.update_by_id, TransactionView.serialize_transaction)
+
+        router.add_route("GET", "/categories", category_controller.list_all, CategoryView.serialize_categories)
+        router.add_route("POST", "/categories", category_controller.create, CategoryView.serialize_category)
+        router.add_route("GET", "/categories/{id}", category_controller.get_by_id, CategoryView.serialize_category)
 
         QuietRequestHandler.router = router
         self.server = HTTPServer(("127.0.0.1", 0), QuietRequestHandler)
@@ -62,6 +76,8 @@ class TestTransactionServer(unittest.TestCase):
         return response.status, response_headers, data
 
     def post_json(self, data):
+        if isinstance(data, dict):
+            data = {"category_id": 1, **data}
         return self.request(
             "POST",
             "/transactions",
@@ -70,12 +86,44 @@ class TestTransactionServer(unittest.TestCase):
         )
 
     def put_json(self, path, data):
+        data = {"category_id": 1, **data}
         return self.request(
             "PUT",
             path,
             body=json.dumps(data),
             headers={"Content-Type": "application/json"},
         )
+
+    def test_categories_and_transaction_relationship(self):
+        status, _, category = self.request(
+            "POST", "/categories", body=json.dumps({"name": "Food"}),
+            headers={"Content-Type": "application/json"},
+        )
+        self.assertEqual(status, 201)
+        self.assertEqual(self.request("GET", f"/categories/{category['id']}")[2], category)
+        status, _, transaction = self.post_json({
+            "transaction_type": "expense", "value": "10.00",
+            "description": "Lunch", "category_id": category["id"],
+        })
+        self.assertEqual(status, 201)
+        self.assertEqual(transaction["category_id"], category["id"])
+        status, _, updated = self.put_json(f"/transactions/{transaction['id']}", {
+            "transaction_type": "expense", "value": "11.00",
+            "description": "Lunch", "category_id": 1,
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(updated["category_id"], 1)
+
+    def test_reject_missing_or_invalid_category(self):
+        payload = {"transaction_type": "expense", "value": "10", "description": "Lunch"}
+        for category_id in (0, -1, True, 1.5, "1"):
+            with self.subTest(category_id=category_id):
+                status, _, _ = self.post_json({**payload, "category_id": category_id})
+                self.assertEqual(status, 422)
+        status, _, data = self.post_json({**payload, "category_id": 999})
+        self.assertEqual((status, data), (404, {"error": "category not found"}))
+        self.assertEqual(self.request("GET", "/transactions")[2], [])
+        self.assertEqual(self.request("GET", "/categories/999")[0], 404)
 
     def test_list_empty_transactions(self):
         status, headers, data = self.request("GET", "/transactions")
@@ -101,6 +149,7 @@ class TestTransactionServer(unittest.TestCase):
             transaction,
             {
                 "id": 1,
+                "category_id": 1,
                 "type": "income",
                 "value": "1500.00",
                 "description": "Salary",
@@ -259,6 +308,7 @@ class TestTransactionServer(unittest.TestCase):
             updated,
             {
                 "id": created["id"],
+                "category_id": 1,
                 "type": "expense",
                 "value": "120.50",
                 "description": "Mercado",

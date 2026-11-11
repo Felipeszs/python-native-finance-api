@@ -7,6 +7,7 @@ class TransactionView:
             "type": transaction.transaction_type,
             "value": str(transaction.value),
             "description": transaction.description,
+            "category_id": transaction.category_id,
         }
 
     @staticmethod

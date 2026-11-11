@@ -10,6 +10,7 @@ class TestTransaction(unittest.TestCase):
             transaction_type="income",
             value=Decimal("100.00"),
             description="Salary",
+            category_id=1,
         )
 
         self.assertIsNone(transaction.id)
@@ -22,6 +23,7 @@ class TestTransaction(unittest.TestCase):
             transaction_type="expense",
             value=Decimal("49.90"),
             description="Groceries",
+            category_id=1,
         )
 
         self.assertEqual(transaction.transaction_type, "expense")
@@ -31,6 +33,7 @@ class TestTransaction(unittest.TestCase):
             transaction_type="income",
             value=Decimal("100.00"),
             description="  Salary  ",
+            category_id=1,
         )
 
         self.assertEqual(transaction.description, "Salary")
@@ -46,6 +49,7 @@ class TestTransaction(unittest.TestCase):
                         transaction_type="income",
                         value=Decimal("100.00"),
                         description=invalid_description,
+                        category_id=1,
                     )
 
     def test_reject_empty_description(self):
@@ -59,6 +63,7 @@ class TestTransaction(unittest.TestCase):
                         transaction_type="income",
                         value=Decimal("100.00"),
                         description=invalid_description,
+                        category_id=1,
                     )
 
     def test_reject_value_that_is_not_a_decimal(self):
@@ -72,6 +77,7 @@ class TestTransaction(unittest.TestCase):
                         transaction_type="income",
                         value=invalid_value,
                         description="Salary",
+                        category_id=1,
                     )
 
     def test_reject_value_that_is_not_greater_than_zero(self):
@@ -85,6 +91,7 @@ class TestTransaction(unittest.TestCase):
                         transaction_type="income",
                         value=invalid_value,
                         description="Salary",
+                        category_id=1,
                     )
 
     def test_reject_invalid_transaction_type(self):
@@ -98,6 +105,7 @@ class TestTransaction(unittest.TestCase):
                         transaction_type=invalid_type,
                         value=Decimal("100.00"),
                         description="Salary",
+                        category_id=1,
                     )
 
 

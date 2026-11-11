@@ -1,5 +1,8 @@
 const elements = {
   error: document.querySelector("#error-message"),
+  categoryForm: document.querySelector("#category-form"),
+  categoryName: document.querySelector("#category-name"),
+  category: document.querySelector("#transaction-category"),
   form: document.querySelector("#transaction-form"),
   type: document.querySelector("#transaction-type"),
   value: document.querySelector("#transaction-value"),
@@ -136,6 +139,7 @@ async function createTransaction(event) {
 
   const payload = {
     transaction_type: elements.type.value,
+    category_id: Number(elements.category.value),
     value: elements.value.value.trim().replace(",", "."),
     description: elements.description.value.trim(),
   };
@@ -170,3 +174,40 @@ async function createTransaction(event) {
 
 elements.form.addEventListener("submit", createTransaction);
 loadTransactions();
+
+async function loadCategories(selectedId) {
+  const categories = await readResponse(await fetch("/categories"));
+  const options = categories.map((category) => {
+    const option = document.createElement("option");
+    option.value = category.id;
+    option.textContent = category.name;
+    return option;
+  });
+  elements.category.replaceChildren(new Option("Selecione uma categoria", "", true, true), ...options);
+  elements.category.options[0].disabled = true;
+  if (selectedId) elements.category.value = String(selectedId);
+}
+
+elements.categoryForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  clearError();
+  const button = elements.categoryForm.querySelector("button");
+  button.disabled = true;
+  try {
+    const response = await fetch("/categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: elements.categoryName.value.trim() }),
+    });
+    const category = await readResponse(response);
+    elements.categoryForm.reset();
+    await loadCategories(category.id);
+  } catch (error) {
+    showError(error instanceof TypeError ? "Não foi possível conectar à API." : error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+loadCategories().catch((error) => showError(error instanceof TypeError
+  ? "Não foi possível carregar as categorias." : error.message));
